@@ -23,7 +23,8 @@ function _fnCalculateColumnWidths ( oSettings )
 		tableWidthAttr = table.getAttribute('width'), // from DOM element
 		tableContainer = table.parentNode,
 		userInputs = false,
-		i, column, columnIdx, width, outerWidth;
+		i, column, columnIdx, width, outerWidth,
+		ie67 = oSettings.oBrowser.bScrollOversize;
 
 	var styleWidth = table.style.width;
 	if ( styleWidth && styleWidth.indexOf('%') !== -1 ) {
@@ -46,9 +47,11 @@ function _fnCalculateColumnWidths ( oSettings )
 	 * the web- browser. No custom sizes can be set in order for this to happen,
 	 * nor scrolling used
 	 */
-	if ( ! userInputs && ! scrollX && ! scrollY &&
-	    columnCount == _fnVisbleColumns( oSettings ) &&
-		columnCount == headerCells.length
+	if ( ie67 || (
+			! userInputs && ! scrollX && ! scrollY &&
+			columnCount == _fnVisbleColumns( oSettings ) &&
+			columnCount == headerCells.length
+		)
 	) {
 		for ( i=0 ; i<columnCount ; i++ ) {
 			columns[i].sWidth = _fnStringToCss( headerCells.eq(i).width() );
@@ -56,21 +59,28 @@ function _fnCalculateColumnWidths ( oSettings )
 	}
 	else
 	{
-		// Otherwise construct a single row table with the widest node in the
-		// data, assign any user defined widths, then insert it into the DOM and
-		// allow the browser to do all the hard work of calculating table widths
+		// Otherwise construct a single row, worst case, table with the widest
+		// node in the data, assign any user defined widths, then insert it into
+		// the DOM and allow the browser to do all the hard work of calculating
+		// table widths
 		var tmpTable = $(table).clone() // don't use cloneNode - IE8 will remove events on the main table
-			.empty()
 			.css( 'visibility', 'hidden' )
-			.removeAttr( 'id' )
-			.append( $(oSettings.nTHead).clone( false ) )
-			.append( $(oSettings.nTFoot).clone( false ) )
-			.append( $('<tbody><tr/></tbody>') );
+			.removeAttr( 'id' );
+
+		// Clean up the table body
+		tmpTable.find('tbody tr').remove();
+		var tr = $('<tr/>').appendTo( tmpTable.find('tbody') );
+
+		// Clone the table header and footer - we can't use the header / footer
+		// from the cloned table, since if scrolling is active, the table's
+		// real header and footer are contained in different table tags
+		tmpTable.find('thead, tfoot').remove();
+		tmpTable
+			.append( $(oSettings.nTHead).clone() )
+			.append( $(oSettings.nTFoot).clone() );
 
 		// Remove any assigned widths from the footer (from scrolling)
 		tmpTable.find('tfoot th, tfoot td').css('width', '');
-
-		var tr = tmpTable.find( 'tbody tr' );
 
 		// Apply custom sizing to the cloned header
 		headerCells = _fnGetUniqueThs( oSettings, tmpTable.find('thead')[0] );
@@ -169,9 +179,20 @@ function _fnCalculateColumnWidths ( oSettings )
 	}
 
 	if ( (tableWidthAttr || scrollX) && ! oSettings._reszEvt ) {
-		$(window).bind('resize.DT-'+oSettings.sInstance, _fnThrottle( function () {
-			_fnAdjustColumnSizing( oSettings );
-		} ) );
+		var bindResize = function () {
+			$(window).bind('resize.DT-'+oSettings.sInstance, _fnThrottle( function () {
+				_fnAdjustColumnSizing( oSettings );
+			} ) );
+		};
+
+		// IE6/7 will crash if we bind a resize event handler on page load.
+		// To be removed in 1.11 which drops IE6/7 support
+		if ( ie67 ) {
+			setTimeout( bindResize, 1000 );
+		}
+		else {
+			bindResize();
+		}
 
 		oSettings._reszEvt = true;
 	}
