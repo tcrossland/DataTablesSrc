@@ -171,6 +171,8 @@ _fnCallbackReg( oSettings, 'aoFooterCallback',     oInit.fnFooterCallback,    'u
 _fnCallbackReg( oSettings, 'aoInitComplete',       oInit.fnInitComplete,      'user' );
 _fnCallbackReg( oSettings, 'aoPreDrawCallback',    oInit.fnPreDrawCallback,   'user' );
 
+oSettings.rowId = _fnGetObjectDataFn( oInit.rowId );
+
 var oClasses = oSettings.oClasses;
 
 // @todo Remove in 1.11
@@ -204,9 +206,6 @@ $this.addClass( oClasses.sTable );
 if ( oSettings.oScroll.sX !== "" || oSettings.oScroll.sY !== "" )
 {
 	oSettings.oScroll.iBarWidth = _fnScrollBarWidth();
-}
-if ( oSettings.oScroll.sX === true ) { // Easy initialisation of x-scrolling
-	oSettings.oScroll.sX = '100%';
 }
 
 if ( oSettings.iInitDisplayStart === undefined )

@@ -354,6 +354,15 @@ class DT_Example
 			$class = (string)$this->_xml['table-class'];
 		}
 
+		// Framework overrides for the table class
+		$framework = isset( $this->_xml['framework'] ) ?
+			(string)$this->_xml['framework'] :
+			'datatables';
+
+		if ( $framework === 'bootstrap' ) {
+			$class = str_replace('display', 'table table-striped table-bordered', $class);
+		}
+
 		if ( ! isset( DT_Example::$tables[ $type ] ) ) {
 			throw new Exception("Unknown table type: ".$type, 1);
 		}
@@ -471,7 +480,7 @@ class DT_Example
 		for ( $i=0, $ien=count($libs) ; $i<$ien ; $i++ ) {
 			$file = $libs[$i]; // needs a path
 
-			if ( strpos($file, '//') !== 0 ) {
+			if ( strpos($file, '//') !== 0 && strpos($file, './') !== 0 ) {
 				$file = call_user_func( $this->_path_resolver, $file );
 			}
 
@@ -490,6 +499,13 @@ class DT_Example
 	private function _resolve_xml_libs ( $framework, $type, $libs )
 	{
 		$a = array();
+
+		// For CSS, if there is a styling framework defined, then it should be
+		// automatically included to make it super easy to switch examples
+		// between the various frameworks
+		if ( $type === 'css' && $framework !== 'datatables' ) {
+			$a[] = $framework;
+		}
 
 		foreach( $libs as $lib ) {
 			if ( isset( $lib['lib'] ) ) {
@@ -514,7 +530,7 @@ class DT_Example
 		for ( $i=0, $ien=count($libs) ; $i<$ien ; $i++ ) {
 			$lib = $libs[$i];
 
-			if ( strpos($lib, '/') === 0 ) {
+			if ( strpos($lib, '/') === 0 || strpos($lib, '.') === 0 ) {
 				$exampleLibs[] = $lib;
 			}
 			else if ( isset( DT_Example::$components[ $lib ] ) ) {
