@@ -91,8 +91,8 @@ function _fnFeatureHtmlTable ( settings )
 		.append(
 			$(_div, { 'class': classes.sScrollBody } )
 				.css( {
+					position: 'relative',
 					overflow: 'auto',
-					height: size( scrollY ),
 					width: size( scrollX )
 				} )
 				.append( table )
@@ -138,6 +138,11 @@ function _fnFeatureHtmlTable ( settings )
 			}
 		} );
 	}
+
+	$(scrollBody).css(
+		scrollY && scroll.bCollapse ? 'max-height' : 'height', 
+		scrollY
+	);
 
 	settings.nScrollHead = scrollHead;
 	settings.nScrollBody = scrollBody;
@@ -211,6 +216,20 @@ function _fnScrollDraw ( settings )
 			style.height = 0;
 		};
 
+	// If the scrollbar visibility has changed from the last draw, we need to
+	// adjust the column sizes as the table width will have changed to account
+	// for the scrollbar
+	var scrollBarVis = divBodyEl.scrollHeight > divBodyEl.clientHeight;
+	
+	if ( settings.scrollBarVis !== scrollBarVis && settings.scrollBarVis !== undefined ) {
+		settings.scrollBarVis = scrollBarVis;
+		_fnAdjustColumnSizing( settings );
+		return; // adjust column sizing will call this function again
+	}
+	else {
+		settings.scrollBarVis = scrollBarVis;
+	}
+
 	/*
 	 * 1. Re-create the table inside the scrolling div
 	 */
@@ -255,13 +274,6 @@ function _fnScrollDraw ( settings )
 		}, footerSrcEls );
 	}
 
-	// If scroll collapse is enabled, when we put the headers back into the body for sizing, we
-	// will end up forcing the scrollbar to appear, making our measurements wrong for when we
-	// then hide it (end of this function), so add the header height to the body scroller.
-	if ( scroll.bCollapse && scrollY !== "" ) {
-		divBodyStyle.height = (divBody[0].offsetHeight + header[0].offsetHeight)+"px";
-	}
-
 	// Size the table as a whole
 	sanityWidth = table.outerWidth();
 	if ( scrollX === "" ) {
@@ -276,32 +288,17 @@ function _fnScrollDraw ( settings )
 		) {
 			tableStyle.width = _fnStringToCss( table.outerWidth() - barWidth);
 		}
-	}
-	else
-	{
-		// x scrolling
-		if ( scrollXInner !== "" ) {
-			// x scroll inner has been given - use it
-			tableStyle.width = _fnStringToCss(scrollXInner);
-		}
-		else if ( sanityWidth == divBody.width() && divBody.height() < table.height() ) {
-			// There is y-scrolling - try to take account of the y scroll bar
-			tableStyle.width = _fnStringToCss( sanityWidth-barWidth );
-			if ( table.outerWidth() > sanityWidth-barWidth ) {
-				// Not possible to take account of it
-				tableStyle.width = _fnStringToCss( sanityWidth );
-			}
-		}
-		else {
-			// When all else fails
-			tableStyle.width = _fnStringToCss( sanityWidth );
-		}
-	}
 
-	// Recalculate the sanity width - now that we've applied the required width,
-	// before it was a temporary variable. This is required because the column
-	// width calculation is done before this table DOM is created.
-	sanityWidth = table.outerWidth();
+		// Recalculate the sanity width
+		sanityWidth = table.outerWidth();
+	}
+	else if ( scrollXInner !== "" ) {
+		// legacy x scroll inner has been given - use it
+		tableStyle.width = _fnStringToCss(scrollXInner);
+
+		// Recalculate the sanity width
+		sanityWidth = table.outerWidth();
+	}
 
 	// Hidden header should have zero height, so remove padding and borders. Then
 	// set the width based on the real headers
@@ -406,18 +403,6 @@ function _fnScrollDraw ( settings )
 		 */
 		if ( ie67 ) {
 			divBodyStyle.height = _fnStringToCss( tableEl.offsetHeight+barWidth );
-		}
-	}
-
-	if ( scrollY && scroll.bCollapse ) {
-		divBodyStyle.height = _fnStringToCss( scrollY );
-
-		var iExtra = (scrollX && tableEl.offsetWidth > divBodyEl.offsetWidth) ?
-			barWidth :
-			0;
-
-		if ( tableEl.offsetHeight < divBodyEl.offsetHeight ) {
-			divBodyStyle.height = _fnStringToCss( tableEl.offsetHeight+iExtra );
 		}
 	}
 

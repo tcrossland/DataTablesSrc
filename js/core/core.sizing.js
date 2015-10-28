@@ -24,7 +24,8 @@ function _fnCalculateColumnWidths ( oSettings )
 		tableContainer = table.parentNode,
 		userInputs = false,
 		i, column, columnIdx, width, outerWidth,
-		ie67 = oSettings.oBrowser.bScrollOversize;
+		browser = oSettings.oBrowser,
+		ie67 = browser.bScrollOversize;
 
 	var styleWidth = table.style.width;
 	if ( styleWidth && styleWidth.indexOf('%') !== -1 ) {
@@ -47,14 +48,16 @@ function _fnCalculateColumnWidths ( oSettings )
 	 * the web- browser. No custom sizes can be set in order for this to happen,
 	 * nor scrolling used
 	 */
-	if ( ie67 || (
-			! userInputs && ! scrollX && ! scrollY &&
-			columnCount == _fnVisbleColumns( oSettings ) &&
-			columnCount == headerCells.length
-		)
+	if ( ie67 || ! userInputs && ! scrollX && ! scrollY &&
+	     columnCount == _fnVisbleColumns( oSettings ) &&
+	     columnCount == headerCells.length
 	) {
 		for ( i=0 ; i<columnCount ; i++ ) {
-			columns[i].sWidth = _fnStringToCss( headerCells.eq(i).width() );
+			var colIdx = _fnVisibleToColumnIndex( oSettings, i );
+
+			if ( colIdx !== null ) {
+				columns[ colIdx ].sWidth = _fnStringToCss( headerCells.eq(i).width() );
+			}
 		}
 	}
 	else
@@ -106,8 +109,24 @@ function _fnCalculateColumnWidths ( oSettings )
 			}
 		}
 
-		// Table has been built, attach to the document so we can work with it
-		tmpTable.appendTo( tableContainer );
+		// Table has been built, attach to the document so we can work with it.
+		// A holding element is used, positioned at the top of the container
+		// with minimal height, so it has no effect on if the container scrolls
+		// or not. Otherwise it might trigger scrolling when it actually isn't
+		// needed
+		var holder = $('<div/>').css( scrollX || scrollY ?
+				{
+					position: 'absolute',
+					top: 0,
+					left: 0,
+					height: 1,
+					right: 0,
+					overflow: 'hidden'
+				} :
+				{}
+			)
+			.append( tmpTable )
+			.appendTo( tableContainer );
 
 		// When scrolling (X or Y) we want to set the width of the table as 
 		// appropriate. However, when not scrolling leave the table width as it
@@ -118,56 +137,46 @@ function _fnCalculateColumnWidths ( oSettings )
 		else if ( scrollX ) {
 			tmpTable.css( 'width', 'auto' );
 
-			if ( tmpTable.width() < tableContainer.offsetWidth ) {
-				tmpTable.width( tableContainer.offsetWidth );
+			if ( tmpTable.width() < tableContainer.clientWidth ) {
+				tmpTable.width( tableContainer.clientWidth );
 			}
 		}
 		else if ( scrollY ) {
-			tmpTable.width( tableContainer.offsetWidth );
+			tmpTable.width( tableContainer.clientWidth );
 		}
 		else if ( tableWidthAttr ) {
 			tmpTable.width( tableWidthAttr );
 		}
 
-		// Take into account the y scrollbar
-		_fnScrollingWidthAdjust( oSettings, tmpTable[0] );
-
-		// Browsers need a bit of a hand when a width is assigned to any columns
-		// when x-scrolling as they tend to collapse the table to the min-width,
-		// even if we sent the column widths. So we need to keep track of what
-		// the table width should be by summing the user given values, and the
-		// automatic values
-		if ( scrollX )
-		{
-			var total = 0;
-
-			for ( i=0 ; i<visibleColumns.length ; i++ ) {
-				column = columns[ visibleColumns[i] ];
-				outerWidth = $(headerCells[i]).outerWidth();
-
-				total += column.sWidthOrig === null ?
-					outerWidth :
-					parseInt( column.sWidth, 10 ) + outerWidth - $(headerCells[i]).width();
-			}
-
-			tmpTable.width( _fnStringToCss( total ) );
-			table.style.width = _fnStringToCss( total );
-		}
-
-		// Get the width of each column in the constructed table
+		// Get the width of each column in the constructed table - we need to
+		// know the inner width (so it can be assigned to the other table's
+		// cells) and the outer width so we can calculate the full width of the
+		// table. This is safe since DataTables requires a unique cell for each
+		// column, but if ever a header can span multiple columns, this will
+		// need to be modified.
+		var total = 0;
 		for ( i=0 ; i<visibleColumns.length ; i++ ) {
-			column = columns[ visibleColumns[i] ];
-			width = $(headerCells[i]).width();
+			var cell = $(headerCells[i]);
+			var border = cell.outerWidth() - cell.width();
 
-			if ( width ) {
-				column.sWidth = _fnStringToCss( width );
-			}
+			// Use getBounding... where possible (not IE8-) because it can give
+			// sub-pixel accuracy, which we then want to round up!
+			var bounding = browser.bBounding ?
+				Math.ceil( headerCells[i].getBoundingClientRect().width ) :
+				cell.outerWidth();
+
+			// Total is tracked to remove any sub-pixel errors as the outerWidth
+			// of the table might not equal the total given here (IE!).
+			total += bounding;
+
+			// Width for each column to use
+			columns[ visibleColumns[i] ].sWidth = _fnStringToCss( bounding - border );
 		}
 
-		table.style.width = _fnStringToCss( tmpTable.css('width') );
+		table.style.width = _fnStringToCss( total );
 
 		// Finished with the table - ditch it
-		tmpTable.remove();
+		holder.remove();
 	}
 
 	// If there is a width attr, we want to attach an event listener which
@@ -260,27 +269,6 @@ function _fnConvertToWidth ( width, parent )
 
 
 /**
- * Adjust a table's width to take account of vertical scroll bar
- *  @param {object} oSettings dataTables settings object
- *  @param {node} n table node
- *  @memberof DataTable#oApi
- */
-
-function _fnScrollingWidthAdjust ( settings, n )
-{
-	var scroll = settings.oScroll;
-
-	if ( scroll.sX || scroll.sY ) {
-		// When y-scrolling only, we want to remove the width of the scroll bar
-		// so the table + scroll bar will fit into the area available, otherwise
-		// we fix the table at its current size with no adjustment
-		var correction = ! scroll.sX ? scroll.iBarWidth : 0;
-		n.style.width = _fnStringToCss( $(n).outerWidth() - correction );
-	}
-}
-
-
-/**
  * Get the widest node
  *  @param {object} settings dataTables settings object
  *  @param {int} colIdx column of interest
@@ -315,6 +303,7 @@ function _fnGetMaxLenString( settings, colIdx )
 	for ( var i=0, ien=settings.aoData.length ; i<ien ; i++ ) {
 		s = _fnGetCellData( settings, i, colIdx, 'display' )+'';
 		s = s.replace( __re_html_remove, '' );
+		s = s.replace( /&nbsp;/g, ' ' );
 
 		if ( s.length > max ) {
 			max = s.length;
@@ -348,39 +337,5 @@ function _fnStringToCss( s )
 	return s.match(/\d$/) ?
 		s+'px' :
 		s;
-}
-
-
-/**
- * Get the width of a scroll bar in this browser being used
- *  @returns {int} width in pixels
- *  @memberof DataTable#oApi
- */
-function _fnScrollBarWidth ()
-{
-	// On first run a static variable is set, since this is only needed once.
-	// Subsequent runs will just use the previously calculated value
-	var width = DataTable.__scrollbarWidth;
-
-	if ( width === undefined ) {
-		var sizer = $('<p/>').css( {
-				position: 'absolute',
-				top: 0,
-				left: 0,
-				width: '100%',
-				height: 150,
-				padding: 0,
-				overflow: 'scroll',
-				visibility: 'hidden'
-			} )
-			.appendTo('body');
-
-		width = sizer[0].offsetWidth - sizer[0].clientWidth;
-		DataTable.__scrollbarWidth = width;
-
-		sizer.remove();
-	}
-
-	return width;
 }
 

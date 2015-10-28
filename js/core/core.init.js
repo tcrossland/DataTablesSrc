@@ -10,6 +10,7 @@ function _fnInitialise ( settings )
 	var i, iLen, iAjaxStart=settings.iInitDisplayStart;
 	var columns = settings.aoColumns, column;
 	var features = settings.oFeatures;
+	var deferLoading = settings.bDeferLoading; // value modified by the draw
 
 	/* Ensure that the table data is fully initialised */
 	if ( ! settings.bInitialised ) {
@@ -41,6 +42,8 @@ function _fnInitialise ( settings )
 		}
 	}
 
+	_fnCallbackFire( settings, null, 'preInit', [settings] );
+
 	// If there is default sorting required - let's do it. The sort function
 	// will do the drawing for us. Otherwise we draw the table regardless of the
 	// Ajax source - this allows the table to look initialised for Ajax sourcing
@@ -49,7 +52,7 @@ function _fnInitialise ( settings )
 
 	// Server-side processing init complete is done by _fnAjaxUpdateDraw
 	var dataSrc = _fnDataSource( settings );
-	if ( dataSrc != 'ssp' ) {
+	if ( dataSrc != 'ssp' || deferLoading ) {
 		// if there is an ajax source load the data
 		if ( dataSrc == 'ajax' ) {
 			_fnBuildAjax( settings, [], function(json) {
@@ -90,9 +93,9 @@ function _fnInitComplete ( settings, json )
 {
 	settings._bInitComplete = true;
 
-	// On an Ajax load we now have data and therefore want to apply the column
-	// sizing
-	if ( json ) {
+	// When data was added after the initialisation (data or Ajax) we need to
+	// calculate the column sizing
+	if ( json || settings.oInit.aaData ) {
 		_fnAdjustColumnSizing( settings );
 	}
 

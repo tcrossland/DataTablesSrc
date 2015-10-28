@@ -1,15 +1,15 @@
-/*! DataTables 1.10.8-dev
- * ©2008-2014 SpryMedia Ltd - datatables.net/license
+/*! DataTables 1.10.10-dev
+ * ©2008-2015 SpryMedia Ltd - datatables.net/license
  */
 
 /**
  * @summary     DataTables
  * @description Paginate, search and order HTML tables
- * @version     1.10.8-dev
+ * @version     1.10.10-dev
  * @file        jquery.dataTables.js
  * @author      SpryMedia Ltd (www.sprymedia.co.uk)
  * @contact     www.sprymedia.co.uk/contact
- * @copyright   Copyright 2008-2014 SpryMedia Ltd.
+ * @copyright   Copyright 2008-2015 SpryMedia Ltd.
  *
  * This source file is free software, available under the following license:
  *   MIT license - http://datatables.net/license
@@ -22,7 +22,7 @@
  */
 
 /*jslint evil: true, undef: true, browser: true */
-/*globals $,require,jQuery,define,_selector_run,_selector_opts,_selector_first,_selector_row_indexes,_ext,_Api,_api_register,_api_registerPlural,_re_new_lines,_re_html,_re_formatted_numeric,_re_escape_regex,_empty,_intVal,_numToDecimal,_isNumber,_isHtml,_htmlNumeric,_pluck,_pluck_order,_range,_stripHtml,_unique,_fnBuildAjax,_fnAjaxUpdate,_fnAjaxParameters,_fnAjaxUpdateDraw,_fnAjaxDataSrc,_fnAddColumn,_fnColumnOptions,_fnAdjustColumnSizing,_fnVisibleToColumnIndex,_fnColumnIndexToVisible,_fnVisbleColumns,_fnGetColumns,_fnColumnTypes,_fnApplyColumnDefs,_fnHungarianMap,_fnCamelToHungarian,_fnLanguageCompat,_fnBrowserDetect,_fnAddData,_fnAddTr,_fnNodeToDataIndex,_fnNodeToColumnIndex,_fnGetCellData,_fnSetCellData,_fnSplitObjNotation,_fnGetObjectDataFn,_fnSetObjectDataFn,_fnGetDataMaster,_fnClearTable,_fnDeleteIndex,_fnInvalidate,_fnGetRowElements,_fnCreateTr,_fnBuildHead,_fnDrawHead,_fnDraw,_fnReDraw,_fnAddOptionsHtml,_fnDetectHeader,_fnGetUniqueThs,_fnFeatureHtmlFilter,_fnFilterComplete,_fnFilterCustom,_fnFilterColumn,_fnFilter,_fnFilterCreateSearch,_fnEscapeRegex,_fnFilterData,_fnFeatureHtmlInfo,_fnUpdateInfo,_fnInfoMacros,_fnInitialise,_fnInitComplete,_fnLengthChange,_fnFeatureHtmlLength,_fnFeatureHtmlPaginate,_fnPageChange,_fnFeatureHtmlProcessing,_fnProcessingDisplay,_fnFeatureHtmlTable,_fnScrollDraw,_fnApplyToChildren,_fnCalculateColumnWidths,_fnThrottle,_fnConvertToWidth,_fnScrollingWidthAdjust,_fnGetWidestNode,_fnGetMaxLenString,_fnStringToCss,_fnScrollBarWidth,_fnSortFlatten,_fnSort,_fnSortAria,_fnSortListener,_fnSortAttachListener,_fnSortingClasses,_fnSortData,_fnSaveState,_fnLoadState,_fnSettingsFromNode,_fnLog,_fnMap,_fnBindAction,_fnCallbackReg,_fnCallbackFire,_fnLengthOverflow,_fnRenderer,_fnDataSource,_fnRowAttributes*/
+/*globals $,require,jQuery,define,_selector_run,_selector_opts,_selector_first,_selector_row_indexes,_ext,_Api,_api_register,_api_registerPlural,_re_new_lines,_re_html,_re_formatted_numeric,_re_escape_regex,_empty,_intVal,_numToDecimal,_isNumber,_isHtml,_htmlNumeric,_pluck,_pluck_order,_range,_stripHtml,_unique,_fnBuildAjax,_fnAjaxUpdate,_fnAjaxParameters,_fnAjaxUpdateDraw,_fnAjaxDataSrc,_fnAddColumn,_fnColumnOptions,_fnAdjustColumnSizing,_fnVisibleToColumnIndex,_fnColumnIndexToVisible,_fnVisbleColumns,_fnGetColumns,_fnColumnTypes,_fnApplyColumnDefs,_fnHungarianMap,_fnCamelToHungarian,_fnLanguageCompat,_fnBrowserDetect,_fnAddData,_fnAddTr,_fnNodeToDataIndex,_fnNodeToColumnIndex,_fnGetCellData,_fnSetCellData,_fnSplitObjNotation,_fnGetObjectDataFn,_fnSetObjectDataFn,_fnGetDataMaster,_fnClearTable,_fnDeleteIndex,_fnInvalidate,_fnGetRowElements,_fnCreateTr,_fnBuildHead,_fnDrawHead,_fnDraw,_fnReDraw,_fnAddOptionsHtml,_fnDetectHeader,_fnGetUniqueThs,_fnFeatureHtmlFilter,_fnFilterComplete,_fnFilterCustom,_fnFilterColumn,_fnFilter,_fnFilterCreateSearch,_fnEscapeRegex,_fnFilterData,_fnFeatureHtmlInfo,_fnUpdateInfo,_fnInfoMacros,_fnInitialise,_fnInitComplete,_fnLengthChange,_fnFeatureHtmlLength,_fnFeatureHtmlPaginate,_fnPageChange,_fnFeatureHtmlProcessing,_fnProcessingDisplay,_fnFeatureHtmlTable,_fnScrollDraw,_fnApplyToChildren,_fnCalculateColumnWidths,_fnThrottle,_fnConvertToWidth,_fnGetWidestNode,_fnGetMaxLenString,_fnStringToCss,_fnSortFlatten,_fnSort,_fnSortAria,_fnSortListener,_fnSortAttachListener,_fnSortingClasses,_fnSortData,_fnSaveState,_fnLoadState,_fnSettingsFromNode,_fnLog,_fnMap,_fnBindAction,_fnCallbackReg,_fnCallbackFire,_fnLengthOverflow,_fnRenderer,_fnDataSource,_fnRowAttributes*/
 
 (/** @lends <global> */function( window, document, undefined ) {
 
@@ -30,16 +30,18 @@
 	"use strict";
 
 	if ( typeof define === 'function' && define.amd ) {
-		// Define as an AMD module if possible
-		define( 'datatables', ['jquery'], factory );
+		// AMD
+		define( ['jquery'], factory );
 	}
-    else if ( typeof exports === 'object' ) {
-        // Node/CommonJS
-        module.exports = factory( require( 'jquery' ) );
-    }
-	else if ( jQuery && !jQuery.fn.dataTable ) {
-		// Define using browser globals otherwise
-		// Prevent multiple instantiations if the script is loaded twice
+	else if ( typeof exports === 'object' ) {
+		// CommonJS
+		module.exports = function ($) {
+			// Get jQuery if it wasn't passed in
+			return factory( $ || require('jquery') );
+		};
+	}
+	else {
+		// Browser
 		factory( jQuery );
 	}
 }
@@ -80,27 +82,27 @@
 	 */
 	var DataTable;
 
-	require('core.internal.js');
-	require('core.compat.js');
-	require('core.columns.js');
-	require('core.data.js');
-	require('core.draw.js');
-	require('core.ajax.js');
-	require('core.filter.js');
-	require('core.info.js');
-	require('core.init.js');
-	require('core.length.js');
-	require('core.page.js');
-	require('core.processing.js');
-	require('core.scrolling.js');
-	require('core.sizing.js');
-	require('core.sort.js');
-	require('core.state.js');
-	require('core.support.js');
+	_buildInclude('core.internal.js');
+	_buildInclude('core.compat.js');
+	_buildInclude('core.columns.js');
+	_buildInclude('core.data.js');
+	_buildInclude('core.draw.js');
+	_buildInclude('core.ajax.js');
+	_buildInclude('core.filter.js');
+	_buildInclude('core.info.js');
+	_buildInclude('core.init.js');
+	_buildInclude('core.length.js');
+	_buildInclude('core.page.js');
+	_buildInclude('core.processing.js');
+	_buildInclude('core.scrolling.js');
+	_buildInclude('core.sizing.js');
+	_buildInclude('core.sort.js');
+	_buildInclude('core.state.js');
+	_buildInclude('core.support.js');
 
 	DataTable = function( options )
 	{
-		require('api.legacy.js');
+		_buildInclude('api.legacy.js');
 
 		var _that = this;
 		var emptyInit = options === undefined;
@@ -127,27 +129,27 @@
 				_fnExtend( o, options, true ) :
 				options;
 
-			require('core.constructor.js');
+			_buildInclude('core.constructor.js');
 		} );
 		_that = null;
 		return this;
 	};
 
-	require('api.base.js');
-	require('api.table.js');
-	require('api.draw.js');
-	require('api.page.js');
-	require('api.ajax.js');
-	require('api.selectors.js');
-	require('api.rows.js');
-	require('api.row.details.js');
-	require('api.columns.js');
-	require('api.cells.js');
-	require('api.order.js');
-	require('api.search.js');
-	require('api.state.js');
-	require('api.static.js');
-	require('api.core.js');
+	_buildInclude('api.base.js');
+	_buildInclude('api.table.js');
+	_buildInclude('api.draw.js');
+	_buildInclude('api.page.js');
+	_buildInclude('api.ajax.js');
+	_buildInclude('api.selectors.js');
+	_buildInclude('api.rows.js');
+	_buildInclude('api.row.details.js');
+	_buildInclude('api.columns.js');
+	_buildInclude('api.cells.js');
+	_buildInclude('api.order.js');
+	_buildInclude('api.search.js');
+	_buildInclude('api.state.js');
+	_buildInclude('api.static.js');
+	_buildInclude('api.core.js');
 
 	/**
 	 * Version string for plug-ins to check compatibility. Allowed format is
@@ -157,7 +159,7 @@
 	 *  @type string
 	 *  @default Version number
 	 */
-	DataTable.version = "1.10.8-dev";
+	DataTable.version = "1.10.10-dev";
 
 	/**
 	 * Private data store, containing all of the settings objects that are
@@ -180,12 +182,12 @@
 	 *  @namespace
 	 */
 	DataTable.models = {};
-	require('model.search.js');
-	require('model.row.js');
-	require('model.column.js');
-	require('model.defaults.js');
-	require('model.defaults.columns.js');
-	require('model.settings.js');
+	_buildInclude('model.search.js');
+	_buildInclude('model.row.js');
+	_buildInclude('model.column.js');
+	_buildInclude('model.defaults.js');
+	_buildInclude('model.defaults.columns.js');
+	_buildInclude('model.settings.js');
 
 	/**
 	 * Extension object for DataTables that is used to provide all extension
@@ -197,15 +199,15 @@
 	 *  @namespace
 	 *  @extends DataTable.models.ext
 	 */
-	require('ext.js');
-	require('ext.classes.js');
-	require('ext.paging.js');
-	require('ext.types.js');
-	require('ext.filter.js');
-	require('ext.sorting.js');
-	require('ext.renderer.js');
-	require('ext.helpers.js');
-	require('api.internal.js');
+	_buildInclude('ext.js');
+	_buildInclude('ext.classes.js');
+	_buildInclude('ext.paging.js');
+	_buildInclude('ext.types.js');
+	_buildInclude('ext.filter.js');
+	_buildInclude('ext.sorting.js');
+	_buildInclude('ext.renderer.js');
+	_buildInclude('ext.helpers.js');
+	_buildInclude('api.internal.js');
 
 	// jQuery access
 	$.fn.dataTable = DataTable;

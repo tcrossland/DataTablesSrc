@@ -144,6 +144,7 @@ _fnMap( oSettings, oInit, [
 	"fnPreFilterCallback",
 	"renderer",
 	"searchDelay",
+	"rowId",
 	[ "iCookieDuration", "iStateDuration" ], // backwards compat
 	[ "oSearch", "oPreviousSearch" ],
 	[ "aoSearchCols", "aoPreSearchCols" ],
@@ -170,6 +171,11 @@ _fnCallbackReg( oSettings, 'aoHeaderCallback',     oInit.fnHeaderCallback,    'u
 _fnCallbackReg( oSettings, 'aoFooterCallback',     oInit.fnFooterCallback,    'user' );
 _fnCallbackReg( oSettings, 'aoInitComplete',       oInit.fnInitComplete,      'user' );
 _fnCallbackReg( oSettings, 'aoPreDrawCallback',    oInit.fnPreDrawCallback,   'user' );
+
+oSettings.rowIdFn = _fnGetObjectDataFn( oInit.rowId );
+
+/* Browser support detection */
+_fnBrowserDetect( oSettings );
 
 var oClasses = oSettings.oClasses;
 
@@ -200,11 +206,6 @@ else
 }
 $this.addClass( oClasses.sTable );
 
-/* Calculate the scroll bar width and cache it for use later on */
-if ( oSettings.oScroll.sX !== "" || oSettings.oScroll.sY !== "" )
-{
-	oSettings.oScroll.iBarWidth = _fnScrollBarWidth();
-}
 
 if ( oSettings.iInitDisplayStart === undefined )
 {
@@ -315,7 +316,7 @@ if ( rowOne.length ) {
 		return cell.getAttribute( 'data-'+name ) !== null ? name : null;
 	};
 
-	$.each( _fnGetRowElements( oSettings, rowOne[0] ).cells, function (i, cell) {
+	$( rowOne[0] ).children('th, td').each( function (i, cell) {
 		var col = oSettings.aoColumns[i];
 
 		if ( col.mData === i ) {
@@ -396,9 +397,6 @@ _fnCallbackReg( oSettings, 'aoDrawCallback', function () {
  * Final init
  * Cache the header, body and footer as required, creating them if needed
  */
-
-/* Browser support detection */
-_fnBrowserDetect( oSettings );
 
 // Work around for Webkit bug 83867 - store the caption-side before removing from doc
 var captions = $this.children('caption').each( function () {

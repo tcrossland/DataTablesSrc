@@ -57,6 +57,26 @@ var __row_selector = function ( settings, selector, opts )
 			}
 		}
 
+		// ID selector. Want to always be able to select rows by id, regardless
+		// of if the tr element has been created or not, so can't rely upon
+		// jQuery here - hence a custom implementation. This does not match
+		// Sizzle's fast selector or HTML4 - in HTML5 the ID can be anything,
+		// but to select it using a CSS selector engine (like Sizzle or
+		// querySelect) it would need to need to be escaped for some characters.
+		// DataTables simplifies this for row selectors since you can select
+		// only a row. A # indicates an id any anything that follows is the id -
+		// unescaped.
+		if ( typeof sel === 'string' && sel.charAt(0) === '#' ) {
+			// get row index from id
+			var rowObj = settings.aIds[ sel.replace( /^#/, '' ) ];
+			if ( rowObj !== undefined ) {
+				return [ rowObj.idx ];
+			}
+
+			// need to fall through to jQuery in case there is DOM id that
+			// matches
+		}
+
 		// Selector - jQuery selector string, array of nodes or jQuery object/
 		// As jQuery's .filter() allows jQuery objects to be passed in filter,
 		// it also allows arrays, so this will cope with all three options
@@ -126,23 +146,49 @@ _api_registerPlural( 'rows().indexes()', 'row().index()', function () {
 	}, 1 );
 } );
 
+_api_registerPlural( 'rows().ids()', 'row().id()', function ( hash ) {
+	var a = [];
+	var context = this.context;
+
+	// `iterator` will drop undefined values, but in this case we want them
+	for ( var i=0, ien=context.length ; i<ien ; i++ ) {
+		for ( var j=0, jen=this[i].length ; j<jen ; j++ ) {
+			var id = context[i].rowIdFn( context[i].aoData[ this[i][j] ]._aData );
+			a.push( (hash === true ? '#' : '' )+ id );
+		}
+	}
+
+	return new _Api( context, a );
+} );
+
 _api_registerPlural( 'rows().remove()', 'row().remove()', function () {
 	var that = this;
 
-	return this.iterator( 'row', function ( settings, row, thatIdx ) {
+	this.iterator( 'row', function ( settings, row, thatIdx ) {
 		var data = settings.aoData;
+		var rowData = data[ row ];
+		var i, ien, j, jen;
+		var loopRow, loopCells;
 
 		data.splice( row, 1 );
 
-		// Update the _DT_RowIndex parameter on all rows in the table
-		for ( var i=0, ien=data.length ; i<ien ; i++ ) {
-			if ( data[i].nTr !== null ) {
-				data[i].nTr._DT_RowIndex = i;
+		// Update the cached indexes
+		for ( i=0, ien=data.length ; i<ien ; i++ ) {
+			loopRow = data[i];
+			loopCells = loopRow.anCells;
+
+			// Rows
+			if ( loopRow.nTr !== null ) {
+				loopRow.nTr._DT_RowIndex = i;
+			}
+
+			// Cells
+			if ( loopCells !== null ) {
+				for ( j=0, jen=loopCells.length ; j<jen ; j++ ) {
+					loopCells[j]._DT_CellIndex.row = i;
+				}
 			}
 		}
-
-		// Remove the target row from the search array
-		var displayIndex = $.inArray( row, settings.aiDisplay );
 
 		// Delete from the display arrays
 		_fnDeleteIndex( settings.aiDisplayMaster, row );
@@ -151,7 +197,21 @@ _api_registerPlural( 'rows().remove()', 'row().remove()', function () {
 
 		// Check for an 'overflow' they case for displaying the table
 		_fnLengthOverflow( settings );
+
+		// Remove the row's ID reference if there is one
+		var id = settings.rowIdFn( rowData._aData );
+		if ( id !== undefined ) {
+			delete settings.aIds[ id ];
+		}
 	} );
+
+	this.iterator( 'table', function ( settings ) {
+		for ( var i=0, ien=settings.aoData.length ; i<ien ; i++ ) {
+			settings.aoData[i].idx = i;
+		}
+	} );
+
+	return this;
 } );
 
 
@@ -177,7 +237,7 @@ _api_register( 'rows.add()', function ( rows ) {
 	// Return an Api.rows() extended instance, so rows().nodes() etc can be used
 	var modRows = this.rows( -1 );
 	modRows.pop();
-	modRows.push.apply( modRows, newRows.toArray() );
+	$.merge( modRows, newRows );
 
 	return modRows;
 } );

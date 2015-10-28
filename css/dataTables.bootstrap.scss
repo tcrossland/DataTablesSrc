@@ -10,6 +10,10 @@ table.dataTable {
 		-webkit-box-sizing: content-box;
 		-moz-box-sizing: content-box;
 		box-sizing: content-box;
+
+		&.dataTables_empty {
+			text-align: center;
+		}
 	}
 
 	// Style options for the table. Foundation provides its own, but it is also
@@ -69,14 +73,29 @@ div.dataTables_wrapper {
 			white-space: nowrap;
 		}
 	}
+
+	div.dataTables_processing {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		width: 200px;
+		margin-left: -100px;
+		margin-top: -26px;
+		text-align: center;
+		padding: 1em 0;
+	}
 }
 
 
 // Sorting - using Glyphicons
 table.dataTable thead {
-	 > tr > th,
-	 > tr > td {
-		padding-right: 30px;
+	> tr > th,
+	> tr > td {
+		&.sorting_asc,
+		&.sorting_desc,
+		&.sorting {
+			padding-right: 30px;
+		}
 
 		&:active {
 			outline: none;
@@ -93,7 +112,7 @@ table.dataTable thead {
 
 		&:after {
 			position: absolute;
-			top: 8px;
+			bottom: 8px;
 			right: 8px;
 			display: block;
 			font-family: 'Glyphicons Halflings';
@@ -212,4 +231,18 @@ div.dataTables_scrollHead table.table-bordered {
 	border-bottom-width: 0;
 }
 
+// Responsive tables. We use rows inside the Bootstrap responsive wrapper,
+// so they need to have their margin and padding removed
+div.table-responsive > div.dataTables_wrapper > div.row {
+	margin: 0;
+
+	> div[class^="col-"] {
+		&:first-child {
+			padding-left: 0;
+		}
+		&:last-child {
+			padding-right: 0;
+		}
+	}
+}
 

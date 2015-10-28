@@ -30,7 +30,7 @@ function _fnCreateTr ( oSettings, iRow, nTrIn, anTds )
 		nTr._DT_RowIndex = iRow;
 
 		/* Special parameters can be given by the data source to be used on the row */
-		_fnRowAttributes( row );
+		_fnRowAttributes( oSettings, row );
 
 		/* Process each column */
 		for ( i=0, iLen=oSettings.aoColumns.length ; i<iLen ; i++ )
@@ -38,6 +38,11 @@ function _fnCreateTr ( oSettings, iRow, nTrIn, anTds )
 			oCol = oSettings.aoColumns[i];
 
 			nTd = nTrIn ? anTds[i] : document.createElement( oCol.sCellType );
+			nTd._DT_CellIndex = {
+				row: iRow,
+				column: i
+			};
+			
 			cells.push( nTd );
 
 			// Need to create the HTML if new, or if a rendering function is defined
@@ -82,17 +87,20 @@ function _fnCreateTr ( oSettings, iRow, nTrIn, anTds )
 /**
  * Add attributes to a row based on the special `DT_*` parameters in a data
  * source object.
+ *  @param {object} settings DataTables settings object
  *  @param {object} DataTables row object for the row to be modified
  *  @memberof DataTable#oApi
  */
-function _fnRowAttributes( row )
+function _fnRowAttributes( settings, row )
 {
 	var tr = row.nTr;
 	var data = row._aData;
 
 	if ( tr ) {
-		if ( data.DT_RowId ) {
-			tr.id = data.DT_RowId;
+		var id = settings.rowIdFn( data );
+
+		if ( id ) {
+			tr.id = id;
 		}
 
 		if ( data.DT_RowClass ) {
@@ -157,7 +165,7 @@ function _fnBuildHead( oSettings )
 			}
 		}
 
-		if ( column.sTitle != cell.html() ) {
+		if ( column.sTitle != cell[0].innerHTML ) {
 			cell.html( column.sTitle );
 		}
 
@@ -629,6 +637,7 @@ function _fnAddOptionsHtml ( oSettings )
 
 	/* Built our DOM structure - replace the holding div with what we want */
 	holding.replaceWith( insert );
+	oSettings.nHolding = null;
 }
 
 

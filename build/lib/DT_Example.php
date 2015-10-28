@@ -12,6 +12,7 @@ class DT_Example
 	static $tables = array();
 	static $lookup_libraries = array();
 	static $components = array();
+	static $components_cdn = false;
 
 	private $_file = null;
 
@@ -28,6 +29,7 @@ class DT_Example
 	private $_additional_libs = null;
 
 	private $_xml_libs = null;
+	private $_tidy_error = null;
 
 
 	function __construct ( $file=null, $template=null, $path_resolver=null, $libs=array() )
@@ -189,6 +191,14 @@ class DT_Example
 
 	private function _htmlTidy( $html )
 	{
+		if ( ! class_exists( 'tidy' ) ) {
+			if ( ! $this->_tidy_error ) {
+				echo "No html tidy - skipping\n";
+				$this->_tidy_error = true;
+			}
+			return $html;
+		}
+
 		$hasEmptyTbody = strpos( $html, '<tbody/>' );
 		$tidy = new tidy();
 		$tidy->parseString( $html, array(
@@ -314,6 +324,11 @@ class DT_Example
 			case 'office':
 				if      ( $type === 'title' ) { return 'Office'; }
 				else if ( $type === 'data' )  { return $row['office']; }
+				break;
+
+			case 'sequence':
+				if      ( $type === 'title' ) { return 'Seq.'; }
+				else if ( $type === 'data' )  { return $row['sequence']; }
 				break;
 
 			default:
@@ -480,7 +495,11 @@ class DT_Example
 		for ( $i=0, $ien=count($libs) ; $i<$ien ; $i++ ) {
 			$file = $libs[$i]; // needs a path
 
-			if ( strpos($file, '//') !== 0 ) {
+			if ( strpos($file, '//') !== 0 &&
+				 strpos($file, './') !== 0 &&
+				 strpos($file, 'http://') !== 0 &&
+				 strpos($file, 'https://') !== 0
+			) {
 				$file = call_user_func( $this->_path_resolver, $file );
 			}
 
@@ -530,7 +549,7 @@ class DT_Example
 		for ( $i=0, $ien=count($libs) ; $i<$ien ; $i++ ) {
 			$lib = $libs[$i];
 
-			if ( strpos($lib, '/') === 0 ) {
+			if ( strpos($lib, '/') === 0 || strpos($lib, '.') === 0 ) {
 				$exampleLibs[] = $lib;
 			}
 			else if ( isset( DT_Example::$components[ $lib ] ) ) {
@@ -559,29 +578,49 @@ class DT_Example
 		$path = $component['path'];
 		$filename = $component['filename'];
 
+		if ( DT_Example::$components_cdn && $lib !== 'editor' ) {
+			$path = 'https://cdn.datatables.net';
+
+			if ( $lib === 'datatables' ) {
+				$path .= '/'.$component['release'];
+			}
+			else {
+				$path .= '/'.$lib.'/'.$component['release'];
+			}
+		}
+
+		$min = DT_Example::$components_cdn ?
+			'.min' :
+			'';
+
+		// DataTables uses a capital in the file name
+		if ( $framework === 'datatables' ) {
+			$framework = 'dataTables';
+		}
+
 		if ( $type === 'js' ) {
 			$jsBaseFilename = $lib === 'datatables' ?
 				'jquery' :
 				'dataTables';
 
 			// Always include the core Javascript file.
-			$out[] = $path.'/js/'.$jsBaseFilename.'.'.$filename.'.js';
+			$out[] = $path.'/js/'.$jsBaseFilename.'.'.$filename.$min.'.js';
 
 			// Possibly include a framework Javascript file. If the framework is
 			// DataTables, then there will be no override JS file.
-			if ( $framework !== 'datatables' && $component['framework']['js'] ) {
-				$out[] = $path.'/js/'.$filename.'.'.$framework.'.js';
+			if ( $framework !== 'dataTables' && $component['framework']['js'] ) {
+				$out[] = $path.'/js/'.$filename.'.'.$framework.$min.'.js';
 			}
 		}
 		else if ( $type === 'css' ) {
 			// Possibly include a framework Javascript file. The DataTables
 			// framework option is a special case as its file name is slightly
 			// different
-			if ( $framework === 'datatables' && $lib === 'datatables' ) {
-				$out[] = $path.'/css/jquery.'.$filename.'.css';
+			if ( $framework === 'dataTables' && $lib === 'datatables' ) {
+				$out[] = $path.'/css/jquery.'.$filename.$min.'.css';
 			}
 			else if ( $component['framework']['css'] ) {
-				$out[] = $path.'/css/'.$filename.'.'.$framework.'.css';
+				$out[] = $path.'/css/'.$filename.'.'.$framework.$min.'.css';
 			}
 		}
 
@@ -610,7 +649,7 @@ class DT_Example
 				continue;
 			}
 
-			$path = strpos($file, '//') !== 0 ?
+			$path = strpos($file, '//') !== 0 && strpos($file, 'https://') !== 0 ?
 				call_user_func( $this->_path_resolver, $file ) :
 				$file;
 
@@ -643,8 +682,22 @@ DT_Example::$tables['html5'] = array(
 	'body'    => true
 );
 
+DT_Example::$tables['sequence'] = array(
+	'columns' => array( 'sequence', 'name', 'position', 'office', 'start_date', 'salary' ),
+	'header'  => true,
+	'footer'  => true,
+	'body'    => true
+);
+
 DT_Example::$tables['ajax'] = array(
 	'columns' => array( 'name', 'position', 'office', 'extn', 'start_date', 'salary' ),
+	'header'  => true,
+	'footer'  => true,
+	'body'    => false
+);
+
+DT_Example::$tables['ajax-sequence'] = array(
+	'columns' => array( 'sequence', 'name', 'position', 'office', 'start_date', 'salary' ),
 	'header'  => true,
 	'footer'  => true,
 	'body'    => false

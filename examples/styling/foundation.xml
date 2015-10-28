@@ -1,16 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<dt-example table-type="html" order="10">
+<dt-example table-type="html" order="10" framework="foundation">
 
-<css lib="foundation" />
-<css lib="datatables-foundation" />
-<js lib="jquery" />
-<js lib="datatables" />
-<js lib="datatables-foundation" />
+<css lib="datatables" />
+<js lib="jquery datatables" />
 
 <title>Foundation</title>
 <js><![CDATA[
 $(document).ready(function() {
-	$('#example').dataTable();
+	$('#example').DataTable();
 } );
 ]]></js>
 

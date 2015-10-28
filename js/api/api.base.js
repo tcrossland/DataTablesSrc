@@ -173,7 +173,7 @@ _Api = function ( context, data )
 	var ctxSettings = function ( o ) {
 		var a = _toSettings( o );
 		if ( a ) {
-			settings.push.apply( settings, a );
+			settings = settings.concat( a );
 		}
 	};
 
@@ -191,7 +191,7 @@ _Api = function ( context, data )
 
 	// Initial data
 	if ( data ) {
-		this.push.apply( this, data.toArray ? data.toArray() : data );
+		$.merge( this, data );
 	}
 
 	// selector
@@ -206,10 +206,12 @@ _Api = function ( context, data )
 
 DataTable.Api = _Api;
 
-_Api.prototype = /** @lends DataTables.Api */{
+// Don't destroy the existing prototype, just extend it. Required for jQuery 2's
+// isPlainObject.
+$.extend( _Api.prototype, {
 	any: function ()
 	{
-		return this.flatten().length !== 0;
+		return this.count() !== 0;
 	},
 
 
@@ -217,6 +219,12 @@ _Api.prototype = /** @lends DataTables.Api */{
 
 
 	context: [], // array of table settings objects
+
+
+	count: function ()
+	{
+		return this.flatten().length;
+	},
 
 
 	each: function ( fn )
@@ -446,7 +454,7 @@ _Api.prototype = /** @lends DataTables.Api */{
 
 
 	unshift: __arrayProto.unshift
-};
+} );
 
 
 _Api.extend = function ( scope, obj, ext )

@@ -8,14 +8,14 @@
 <title>Setting defaults</title>
 <js><![CDATA[
 
-$.extend( $.fn.dataTable.defaults, {
+$.extend( true, $.fn.dataTable.defaults, {
 	"searching": false,
 	"ordering": false
 } );
 
 
 $(document).ready(function() {
-	$('#example').dataTable();
+	$('#example').DataTable();
 } );
 
 ]]></js>

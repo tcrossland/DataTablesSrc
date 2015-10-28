@@ -4,7 +4,10 @@
 
 CLOSURE="/usr/local/closure_compiler/compiler.jar"
 JSDOC="/usr/local/jsdoc/jsdoc"
+JSHINT="/usr/bin/jshint"
 
+
+# CSS styling frameworks that DataTables supports
 FRAMEWORKS=(
 	'bootstrap'
 	'foundation'
@@ -20,19 +23,19 @@ function version_from_file {
 # $1 - string - section name to echo
 function echo_section {
 	# Cyan
-	echo "\033[0;36m  ${1}\033[0m"
+	printf "\033[0;36m  %s\033[0m \n" "$1"
 }
 
 # $1 - string - message to echo
 function echo_msg {
 	# Green
-	echo "\033[0;32m    ${1}\033[0m"
+	printf "\033[0;32m    %s\033[0m \n" "$1"
 }
 
 # $1 - string - error to echo
 function echo_error {
 	# Red
-	echo "\033[0;31m  ${1}\033[0m"
+	printf "\033[0;31m  %s\033[0m \n" "$1"
 }
 
 # Will compress a CSS file using SASS, saving the new file into the same
@@ -61,6 +64,8 @@ function scss_compile {
 
 	echo_msg "SCSS compiling $FILE.scss"
 	sass --scss --stop-on-error --style expanded $DIR/$FILE.scss > $DIR/$FILE.css
+
+	css_compress $DIR/$FILE.css
 }
 
 # Compile SCSS files for a specific extension and the supported frameworks
@@ -153,13 +158,13 @@ function js_require {
 	IFS='%'
 
 	cp $IN_FILE $IN_FILE.build
-	grep "require('" $IN_FILE.build > /dev/null
+	grep "_buildInclude('" $IN_FILE.build > /dev/null
 
 	while [ $? -eq 0 ]; do
-		REQUIRE=$(grep "require('" $IN_FILE.build | head -n 1)
+		REQUIRE=$(grep "_buildInclude('" $IN_FILE.build | head -n 1)
 
-		SPACER=$(echo ${REQUIRE} | cut -d r -f 1)
-		FILE=$(echo ${REQUIRE} | sed -e "s#^.*require('##g" -e "s#');##")
+		SPACER=$(echo ${REQUIRE} | cut -d _ -f 1)
+		FILE=$(echo ${REQUIRE} | sed -e "s#^.*_buildInclude('##g" -e "s#');##")
 		DIR=$(echo ${FILE} | cut -d \. -f 1)
 
 		sed "s#^#${SPACER}#" < ${DIR}/${FILE} > ${DIR}/${FILE}.build
@@ -169,7 +174,7 @@ function js_require {
 
 		rm ${DIR}/${FILE}.build
 
-		grep "require('" $IN_FILE.build > /dev/null
+		grep "_buildInclude('" $IN_FILE.build > /dev/null
 	done
 
 	mv $IN_FILE.build $OUT

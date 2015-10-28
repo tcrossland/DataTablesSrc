@@ -86,7 +86,7 @@ $.extend( true, DataTable.ext.renderer, {
 						attach( inner, button );
 					}
 					else {
-						btnDisplay = '';
+						btnDisplay = null;
 						btnClass = '';
 
 						switch ( button ) {
@@ -125,7 +125,7 @@ $.extend( true, DataTable.ext.renderer, {
 								break;
 						}
 
-						if ( btnDisplay ) {
+						if ( btnDisplay !== null ) {
 							node = $('<a>', {
 									'class': classes.sPageButton+' '+btnClass,
 									'aria-controls': settings.sTableId,
@@ -158,7 +158,7 @@ $.extend( true, DataTable.ext.renderer, {
 				// elements, focus is lost on the select button which is bad for
 				// accessibility. So we want to restore focus once the draw has
 				// completed
-				activeEl = $(document.activeElement).data('dt-idx');
+				activeEl = $(host).find(document.activeElement).data('dt-idx');
 			}
 			catch (e) {}
 

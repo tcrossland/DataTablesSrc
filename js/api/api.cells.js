@@ -29,7 +29,7 @@ var __cell_selector = function ( settings, selector, opts )
 
 					if ( fnSelector ) {
 						// Selector - function
-						host = settings.aoData[ row ];
+						host = data[ row ];
 
 						if ( s( o, _fnGetCellData(settings, row, j), host.anCells ? host.anCells[j] : null ) ) {
 							a.push( o );
@@ -54,12 +54,10 @@ var __cell_selector = function ( settings, selector, opts )
 		return allCells
 			.filter( s )
 			.map( function (i, el) {
-				row = el.parentNode._DT_RowIndex;
-
-				return {
-					row: row,
-					column: $.inArray( el, data[ row ].anCells )
-				};
+				return { // use a new object, in case someone changes the values
+					row:    el._DT_CellIndex.row,
+					column: el._DT_CellIndex.column
+ 				};
 			} )
 			.toArray();
 	};

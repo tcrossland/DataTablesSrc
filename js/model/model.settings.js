@@ -227,7 +227,21 @@ DataTable.models.oSettings = {
 		 *  @type boolean
 		 *  @default false
 		 */
-		"bScrollbarLeft": false
+		"bScrollbarLeft": false,
+
+		/**
+		 * Flag for if `getBoundingClientRect` is fully supported or not
+		 *  @type boolean
+		 *  @default false
+		 */
+		"bBounding": false,
+
+		/**
+		 * Browser scrollbar width
+		 *  @type integer
+		 *  @default 0
+		 */
+		"barWidth": 0
 	},
 
 
@@ -271,6 +285,13 @@ DataTable.models.oSettings = {
 	 *  @default []
 	 */
 	"aiDisplayMaster": [],
+
+	/**
+	 * Map of row ids to data indexes
+	 *  @type object
+	 *  @default {}
+	 */
+	"aIds": {},
 
 	/**
 	 * Store information about each column that is in use
@@ -880,5 +901,19 @@ DataTable.models.oSettings = {
 	 *  @type object
 	 *  @default {}
 	 */
-	"oPlugins": {}
+	"oPlugins": {},
+
+	/**
+	 * Function used to get a row's id from the row's data
+	 *  @type function
+	 *  @default null
+	 */
+	"rowIdFn": null,
+
+	/**
+	 * Data location where to store a row's id
+	 *  @type string
+	 *  @default null
+	 */
+	"rowId": null
 };

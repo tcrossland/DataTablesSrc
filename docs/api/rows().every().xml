@@ -6,7 +6,18 @@
 
 	<type type="function">
 		<signature>rows().every( fn )</signature>
-		<description>Iterate over each selected row, with the function context set to be the row in question</description>
+		<description>Iterate over each selected row</description>
+		<parameter type="function" name="fn">
+			Function to execute for every row selected. The function's content is set to be an API instance for the row in question.
+
+			As of DataTables 1.10.8 the function is passed the following parameters:
+
+			1. Row index
+			2. Table loop counter
+			3. Row loop counter
+
+			No return value is expected or acted upon.
+		</parameter>
 		<returns type="DataTables.Api">DataTables API instance of the selected rows.</returns>
 	</type>
 
@@ -33,7 +44,7 @@
 		Using `dt-api rows().every()` this can be rewritten as:
 
 		```js
-		table.rows().every( function () {
+		table.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
 			var data = this.data();
 			// ... do something with data(), or this.node(), etc
 		} );
@@ -47,7 +58,7 @@
 	<example title="Add a child row to all rows, passing in a jQuery created `dt-tag tr` element and show all child rows"><![CDATA[
 var table = $('#example').DataTable();
 
-table.rows().every( function () {
+table.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
 	this
 		.child(
 			$(
@@ -67,7 +78,7 @@ table.rows().every( function () {
 	<example title="Update all rows in the table, redrawing only when complete"><![CDATA[
 var table = $('#example').DataTable();
 
-table.rows().every( function () {
+table.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
 	var d = this.data();
 
 	d.counter++; // update data source for the row

@@ -11,7 +11,7 @@
 $(document).ready(function() {
 	var selected = [];
 
-	$("#example").dataTable({
+	$("#example").DataTable({
 		"processing": true,
 		"serverSide": true,
 		"ajax": "scripts/ids-arrays.php",
@@ -43,6 +43,8 @@ $(document).ready(function() {
 When you want to have user selectable rows in DataTables, it is relatively trivial when using DOM based data - but when using server-side processing, DataTables doesn't retain DOM row elements over pages / filtering etc. As such, you will need to keep a track of which rows a user as selected and mark them as selected on each draw.
 
 This is shown in this demo, which uses a unique ID assigned to the TR element (this is done automatically through the use of the `DT_RowId` special property returned as part of the object given by the server for each row) to track which rows are selected and reselect them is appropriate on a draw.
+
+If you are looking for a more complete and easier to use row selection option, check out the [Select extension](https://datatables.net/extras/select) provides an API that is fully integrated with DataTables for selecting rows and acting upon those selected rows.
 
 ]]></info>
 

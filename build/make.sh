@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 . include.sh
 
@@ -34,13 +34,13 @@ function build_js {
 	OLD_IFS=$IFS
 	IFS='%'
 	cp DataTables.js DataTables.js.build
-	grep "require('" DataTables.js.build > /dev/null
+	grep "_buildInclude('" DataTables.js.build > /dev/null
 
 	while [ $? -eq 0 ]; do
-		REQUIRE=$(grep "require('" DataTables.js.build | head -n 1)
+		REQUIRE=$(grep "_buildInclude('" DataTables.js.build | head -n 1)
 
-		SPACER=$(echo ${REQUIRE} | cut -d r -f 1)
-		FILE=$(echo ${REQUIRE} | sed -e "s#^.*require('##g" -e "s#');##")
+		SPACER=$(echo ${REQUIRE} | cut -d _ -f 1)
+		FILE=$(echo ${REQUIRE} | sed -e "s#^.*_buildInclude('##g" -e "s#');##")
 		DIR=$(echo ${FILE} | cut -d \. -f 1)
 
 		sed "s#^#${SPACER}#" < ${DIR}/${FILE} > ${DIR}/${FILE}.build
@@ -50,23 +50,31 @@ function build_js {
 
 		rm ${DIR}/${FILE}.build
 
-		grep "require('" DataTables.js.build > /dev/null
+		grep "_buildInclude('" DataTables.js.build > /dev/null
 	done
 
 	mv DataTables.js.build $OUT_FILE
 
 	# JSHint
-	jshint --config $SCRIPT_DIR/jshint.config $OUT_FILE
-	if [ $? -eq 0 ]; then
-		echo_msg "JSHint passed"
+	if [ -e $JSHINT ]; then
+		$JSHINT --config $SCRIPT_DIR/jshint.config $OUT_FILE
+
+		if [ $? -eq 0 ]; then
+			echo_msg "JSHint passed"
+		else
+			echo_error "JSHint failed"
+		fi
 	else
-		echo_error "JSHint failed"
+		echo_error "JSHint not installed at $JSHINT - skipping"
 	fi
 
 	js_compress $OUT_FILE
 
 	cp jquery.js $OUT_DIR
 	cp integration/* $OUT_DIR
+
+	# Compress the integration files
+	js_frameworks dataTables $OUT_DIR
 
 	IFS=$OLD_IFS
 }
@@ -308,12 +316,16 @@ function usage {
 
       extension <ext> [debug] - Extension to build where <ext> is one of:
         - AutoFill
+        - Buttons
         - ColVis
         - ColReorder
         - FixedColumns
         - FixedHeader
         - KeyTable
+        - RowReorder
+        - Responsive
         - Scroller
+        - Select
         - TableTools
 
     and the optional [debug] parameter can be used to disable JS and CSS
@@ -325,14 +337,6 @@ function usage {
 # Main script
 #
 cd $BASE_DIR
-
-# Sanity check that the working branch is going to build correctly
-CURR_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-if [ $SYNC_BRANCH != $CURR_BRANCH ]; then
-	echo_error "Working branch ($CURR_BRANCH) is not the same as the script branch ($SYNC_BRANCH)"
-	echo_error "Exiting..."
-	exit
-fi
 
 echo ""
 echo_section "DataTables build ($VERSION) - branch: $SYNC_BRANCH"
@@ -369,6 +373,14 @@ case "$1" in
 		;;
 
 	"sync")
+		# Sanity check that the working branch is going to build correctly
+		CURR_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+		if [ $SYNC_BRANCH != $CURR_BRANCH ]; then
+			echo_error "Working branch ($CURR_BRANCH) is not the same as the script branch ($SYNC_BRANCH)"
+			echo_error "Exiting..."
+			exit
+		fi
+
 		build_repo_sync
 		;;
 

@@ -16,7 +16,8 @@ function _fnAddData ( oSettings, aDataIn, nTr, anTds )
 	/* Create the object for storing information about this new row */
 	var iRow = oSettings.aoData.length;
 	var oData = $.extend( true, {}, DataTable.models.oRow, {
-		src: nTr ? 'dom' : 'data'
+		src: nTr ? 'dom' : 'data',
+		idx: iRow
 	} );
 
 	oData._aData = aDataIn;
@@ -25,19 +26,20 @@ function _fnAddData ( oSettings, aDataIn, nTr, anTds )
 	/* Create the cells */
 	var nTd, sThisType;
 	var columns = oSettings.aoColumns;
+
+	// Invalidate the column types as the new data needs to be revalidated
 	for ( var i=0, iLen=columns.length ; i<iLen ; i++ )
 	{
-		// When working with a row, the data source object must be populated. In
-		// all other cases, the data source object is already populated, so we
-		// don't overwrite it, which might break bindings etc
-		if ( nTr ) {
-			_fnSetCellData( oSettings, iRow, i, _fnGetCellData( oSettings, iRow, i ) );
-		}
 		columns[i].sType = null;
 	}
 
 	/* Add to the display array */
 	oSettings.aiDisplayMaster.push( iRow );
+
+	var id = oSettings.rowIdFn( aDataIn );
+	if ( id !== undefined ) {
+		oSettings.aIds[ id ] = oData;
+	}
 
 	/* Create the DOM information, or register it if already present */
 	if ( nTr || ! oSettings.oFeatures.bDeferRender )
@@ -127,7 +129,7 @@ function _fnGetCellData( settings, rowIdx, colIdx, type )
 		if ( settings.iDrawError != draw && defaultContent === null ) {
 			_fnLog( settings, 0, "Requested unknown parameter "+
 				(typeof col.mData=='function' ? '{function}' : "'"+col.mData+"'")+
-				" for row "+rowIdx, 4 );
+				" for row "+rowIdx+", column "+colIdx, 4 );
 			settings.iDrawError = draw;
 		}
 		return defaultContent;
@@ -265,8 +267,10 @@ function _fnGetObjectDataFn( mSource )
 						innerSrc = a.join('.');
 
 						// Traverse each entry in the array getting the properties requested
-						for ( var j=0, jLen=data.length ; j<jLen ; j++ ) {
-							out.push( fetchData( data[j], type, innerSrc ) );
+						if ( $.isArray( data ) ) {
+							for ( var j=0, jLen=data.length ; j<jLen ; j++ ) {
+								out.push( fetchData( data[j], type, innerSrc ) );
+							}
 						}
 
 						// If a string is given in between the array notation indicators, that
@@ -366,11 +370,21 @@ function _fnSetObjectDataFn( mSource )
 					innerSrc = b.join('.');
 
 					// Traverse each entry in the array setting the properties requested
-					for ( var j=0, jLen=val.length ; j<jLen ; j++ )
+					if ( $.isArray( val ) )
 					{
-						o = {};
-						setData( o, val[j], innerSrc );
-						data[ a[i] ].push( o );
+						for ( var j=0, jLen=val.length ; j<jLen ; j++ )
+						{
+							o = {};
+							setData( o, val[j], innerSrc );
+							data[ a[i] ].push( o );
+						}
+					}
+					else
+					{
+						// We've been asked to save data to an array, but it
+						// isn't array data to be saved. Best that can be done
+						// is to just save the value.
+						data[ a[i] ] = val;
 					}
 
 					// The inner call to setData has already traversed through the remainder
@@ -443,6 +457,7 @@ function _fnClearTable( settings )
 	settings.aoData.length = 0;
 	settings.aiDisplayMaster.length = 0;
 	settings.aiDisplay.length = 0;
+	settings.aIds = {};
 }
 
 
@@ -548,7 +563,7 @@ function _fnInvalidate( settings, rowIdx, src, colIdx )
 		}
 
 		// Update DataTables special `DT_*` attributes for the row
-		_fnRowAttributes( row );
+		_fnRowAttributes( settings, row );
 	}
 }
 
@@ -580,7 +595,11 @@ function _fnGetRowElements( settings, row, colIdx, d )
 		objectRead = settings._rowReadObject;
 
 	// Allow the data object to be passed in, or construct
-	d = d || objectRead ? {} : [];
+	d = d !== undefined ?
+		d :
+		objectRead ?
+			{} :
+			[];
 
 	var attr = function ( str, td  ) {
 		if ( typeof str === 'string' ) {
@@ -646,6 +665,17 @@ function _fnGetRowElements( settings, row, colIdx, d )
 
 		for ( var j=0, jen=tds.length ; j<jen ; j++ ) {
 			cellProcess( tds[j] );
+		}
+	}
+
+	// Read the ID from the DOM if present
+	var rowNode = row.firstChild ? row : row.nTr;
+
+	if ( rowNode ) {
+		var id = rowNode.getAttribute( 'id' );
+
+		if ( id ) {
+			_fnSetObjectDataFn( settings.rowId )( d, id );
 		}
 	}
 
